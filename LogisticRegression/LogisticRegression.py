@@ -1,56 +1,95 @@
-import numpy as np
+def main():
+    import numpy as np
+    from sklearn.datasets import load_breast_cancer
+    from sklearn.model_selection import train_test_split
+    from sklearn.metrics import accuracy_score
 
+    # Загрузка данных
+    breast_cancer = load_breast_cancer()
+    X, y = breast_cancer.data, breast_cancer.target
 
-class LogisticRegression:
-    def __init__(self, lr=0.01, num_iter=100000, fit_intercept=True, verbose=False):
-        self.lr = lr
-        self.num_iter = num_iter
-        self.fit_intercept = fit_intercept
-        self.verbose = verbose
+    # Разделение данных на обучающий и тестовый наборы
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    def __add_intercept(self, X):
-        intercept = np.ones((X.shape[0], 1))
-        return np.concatenate((intercept, X), axis=1)
+    # Преобразование меток для логистической регрессии (бинарная классификация)
+    y_train_binary = y_train
+    y_test_binary = y_test
 
-    def __sigmoid(self, z):
+    # Метод k ближайших соседей (KNN)
+    class KNNClassifier:
+        def __init__(self, k=3):
+            self.k = k
+
+        def fit(self, X, y):
+            self.X_train = X
+            self.y_train = y
+
+        def predict(self, X_test):
+            y_pred = [self._predict(x) for x in X_test]
+            return np.array(y_pred)
+
+        def _predict(self, x):
+            distances = [self._euclidean_distance(x, x_train) for x_train in self.X_train]
+            k_indices = np.argsort(distances)[:self.k]
+            k_nearest_labels = [self.y_train[i] for i in k_indices]
+            most_common = np.bincount(k_nearest_labels).argmax()
+            return most_common
+
+        def _euclidean_distance(self, x1, x2):
+            return np.sqrt(np.sum((x1 - x2)**2))
+
+    # Значения k для тестирования
+    k_values = [3, 5, 7, 9]
+
+    for k in k_values:
+        # KNN с определенным значением k
+        knn = KNNClassifier(k=k)
+        knn.fit(X_train, y_train)
+        y_pred_knn = knn.predict(X_test)
+        accuracy_knn = accuracy_score(y_test, y_pred_knn)
+        print(f"KNN (k={k}): Точность на тестовом наборе данных: {accuracy_knn:.2f}")
+
+    # Логистическая регрессия
+    def sigmoid(z):
         return 1 / (1 + np.exp(-z))
 
-    def __loss(self, h, y):
-        return (-y * np.log(h) - (1 - y) * np.log(1 - h)).mean()
+    class LogisticRegression:
+        def __init__(self, learning_rate=0.01, n_iterations=1000):
+            self.learning_rate = learning_rate
+            self.n_iterations = n_iterations
 
-    def fit(self, X, y):
-        if self.fit_intercept:
-            X = self.__add_intercept(X)
+        def fit(self, X, y):
+            self.X_train = X
+            self.y_train = y
+            self.weights = np.zeros(X.shape[1])
+            self.bias = 0
 
-        self.theta = np.zeros(X.shape[1])
+            for _ in range(self.n_iterations):
+                linear_model = np.dot(self.X_train, self.weights) + self.bias
+                y_pred = sigmoid(linear_model)
 
-        for i in range(self.num_iter):
-            z = np.dot(X, self.theta)
-            h = self.__sigmoid(z)
-            gradient = np.dot(X.T, (h - y)) / y.size
-            self.theta -= self.lr * gradient
+                dw = (1 / len(self.X_train)) * np.dot(self.X_train.T, (y_pred - self.y_train))
+                db = (1 / len(self.X_train)) * np.sum(y_pred - self.y_train)
 
-            if (self.verbose == True and i % 10000 == 0):
-                z = np.dot(X, self.theta)
-                h = self.__sigmoid(z)
-                print(f'Loss: {self.__loss(h, y)} \t')
+                self.weights -= self.learning_rate * dw
+                self.bias -= self.learning_rate * db
 
-    def predict_prob(self, X):
-        if self.fit_intercept:
-            X = self.__add_intercept(X)
+        def predict(self, X_test):
+            linear_model = np.dot(X_test, self.weights) + self.bias
+            y_pred = sigmoid(linear_model)
+            y_pred_class = [1 if i > 0.5 else 0 for i in y_pred]
+            return np.array(y_pred_class)
 
-        return self.__sigmoid(np.dot(X, self.theta))
+    # Значения скорости обучения для тестирования
+    learning_rates = [0.001, 0.01, 0.1]
 
-    def predict(self, X, threshold=0.5):
-        return self.predict_prob(X) >= threshold
+    for learning_rate in learning_rates:
+        # Логистическая регрессия с определенной скоростью обучения
+        logreg = LogisticRegression(learning_rate=learning_rate)
+        logreg.fit(X_train, y_train_binary)
+        y_pred_logreg = logreg.predict(X_test)
+        accuracy_logreg = accuracy_score(y_test_binary, y_pred_logreg)
+        print(f"Логистическая регрессия (learning_rate={learning_rate}): Точность на тестовом наборе данных: {accuracy_logreg:.2f}")
 
-
-X_train = np.array([[2, 3], [4, 5], [6, 7], [8, 9]])
-y_train = np.array([0, 0, 1, 1])
-
-lr_model = LogisticRegression(lr=0.1, num_iter=300000)
-lr_model.fit(X_train, y_train)
-
-X_test = np.array([[1, 2], [5, 6], [7, 8]])
-predictions = lr_model.predict(X_test)
-print("Predictions:", predictions)
+if __name__ == "__main__":
+    main()
