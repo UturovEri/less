@@ -4,14 +4,11 @@ def main():
     from sklearn.model_selection import train_test_split
     from sklearn.metrics import accuracy_score
 
-    # Загрузка данных
     breast_cancer = load_breast_cancer()
     X, y = breast_cancer.data, breast_cancer.target
 
-    # Разделение данных на обучающий и тестовый наборы
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Преобразование меток для логистической регрессии (бинарная классификация)
     y_train_binary = y_train
     y_test_binary = y_test
 
@@ -42,7 +39,6 @@ def main():
     k_values = [3, 5, 7, 9]
 
     for k in k_values:
-        # KNN с определенным значением k
         knn = KNNClassifier(k=k)
         knn.fit(X_train, y_train)
         y_pred_knn = knn.predict(X_test)
@@ -84,7 +80,6 @@ def main():
     learning_rates = [0.001, 0.01, 0.1]
 
     for learning_rate in learning_rates:
-        # Логистическая регрессия с определенной скоростью обучения
         logreg = LogisticRegression(learning_rate=learning_rate)
         logreg.fit(X_train, y_train_binary)
         y_pred_logreg = logreg.predict(X_test)
